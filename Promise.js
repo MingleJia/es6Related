@@ -1,4 +1,4 @@
-
+// 参考文档：https://www.jianshu.com/p/c77cfde7ebe1
 function Promise(task) {
     let self = this; //缓存this
     self.status = 'pending'; //默认状态为pending
@@ -7,6 +7,7 @@ function Promise(task) {
     self.onRejectedCallbacks = [];   //存放着所有的失败的回调函数
 
     // 调用resolve方法可以把promise状态变成成功态
+    // resolve和reject 方法 接收一个参数value，即异步操作返回的结果，方便传值。
     function resolve(value) {
         if (value instanceof Promise) {
             return value.then(resolve, reject)
@@ -17,6 +18,7 @@ function Promise(task) {
             if (self.status == 'pending') {
                 self.value = value;
                 self.status = 'resolved';
+                // 调用then中注册的回调函数
                 self.onResolvedCallbacks.forEach(item => item(self.value));
             }
         });
@@ -24,6 +26,7 @@ function Promise(task) {
     }
 
     // 调用reject方法可以把当前的promise状态变成失败态
+    // resolve和reject 方法 接收一个参数value，即异步操作返回的结果，方便传值。
     function reject(value) {
         setTimeout(function () {
             if (self.status == 'pending') {
@@ -35,6 +38,8 @@ function Promise(task) {
     }
 
     // 立即执行传入的任务
+    // 创建 Promise 对象同时，调用其 task, 并传入 resolve和reject 方法，
+    // 当 task 的异步操作执行成功后，就会调用 resolve，也就是执行 Promise 
     try {
         task(resolve, reject);
     } catch (e) {
@@ -92,6 +97,11 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
         throw value
     };
     let promise2;
+    // 用setTimeout的原因：
+    // 如果传入的是一个不包含异步操作的函数，resolve就会先于 then 执行，
+    // 即 promise.onResolvedCallbacks 是一个空数组，
+    // 为了解决这个问题，在 resolve 函数中添加 setTimeout，
+    // 将 resolve 中执行回调的逻辑放置到 JS 任务队列末尾；reject函数同理。
     if (self.status == 'resolved') {
         promise2 = new Promise(function (resolve, reject) {
             setTimeout(function () {
@@ -116,6 +126,8 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
             });
         });
     }
+    // 将成功回调放入 promise.onResolvedCallbacks 数组；
+    // 失败回调放入 promise.onRejectedCallbacks 数组
     if (self.status == 'pending') {
         promise2 = new Promise(function (resolve, reject) {
             self.onResolvedCallbacks.push(function (value) {
@@ -136,6 +148,7 @@ Promise.prototype.then = function (onFulfilled, onRejected) {
             });
         });
     }
+    // 返回一个 Promise 实例 promise2，实现链式调用
     return promise2;
 }
 
